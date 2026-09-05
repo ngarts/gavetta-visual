@@ -1,0 +1,14 @@
+# Python virtual environment
+.venv/
+
+# Master audio files are kept locally and are not versioned
+audio/*.wav
+audio/*.flac
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Generated data
+data/*
+!data/.gitkeep
