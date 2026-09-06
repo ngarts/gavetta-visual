@@ -15,7 +15,24 @@ uses them to determine both the visual sequence and the behavior of the shaders.
 The result is a deterministic audiovisual performance in which the music
 contributes to its own visual direction.
 
+## Watch the final video
+
+The official visual video of **“Gavetta” by Nicola Gullo** was generated
+with this project.
+
+▶ **Nicola Gullo – Gavetta (Official Visual Video)**  
+https://youtu.be/o009C6Qxiv4
+
+
+
+
+
+
 ---
+
+
+
+
 
 ## Concept
 
