@@ -12,3 +12,7 @@ __pycache__/
 # Generated data
 data/*
 !data/.gitkeep
+
+# Rendered videos
+output/*
+!output/.gitkeep
