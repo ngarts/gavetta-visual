@@ -580,7 +580,7 @@ void main()
     // ========================================================
 
     vec2 p =
-        uv / 1.05;
+        uv / 1.62;
 
     p =
         rotate2D(
@@ -597,31 +597,254 @@ void main()
 
 
     // ========================================================
-    // Sfondo
+    // Sfondo astratto
+    //
+    // Più presente del precedente, ma sempre molto morbido.
+    // Deve creare profondità dietro al vetro senza sembrare
+    // una scena separata.
     // ========================================================
 
-    vec3 color =
+    vec3 backgroundBlack =
         vec3(
-            0.002,
-            0.0004,
+            0.003,
+            0.0005,
             0.008
         );
 
-    float vignette =
-        1.0 -
-        smoothstep(
-            0.15,
-            1.65,
-            length(uv)
+    vec3 backgroundViolet =
+        vec3(
+            0.16,
+            0.012,
+            0.22
         );
+
+
+    // --------------------------------------------------------
+    // Grande alone centrale
+    // --------------------------------------------------------
+
+    float radialGlow =
+        exp(
+            -length(
+                uv
+                *
+                vec2(
+                    0.72,
+                    1.05
+                )
+            )
+            * 1.10
+        );
+
+
+    float slowBreath =
+        0.90
+        +
+        0.10
+        *
+        sin(
+            u_time
+            *
+            0.16
+        );
+
+
+    vec3 color =
+        mix(
+            backgroundBlack,
+            backgroundViolet,
+            radialGlow
+            *
+            0.82
+            *
+            slowBreath
+        );
+
+
+    // --------------------------------------------------------
+    // Alone dietro il lobo sinistro
+    // --------------------------------------------------------
+
+    float glowLeft =
+        exp(
+            -dot(
+                (
+                    uv
+                    -
+                    vec2(
+                        -0.72,
+                        0.02
+                    )
+                )
+                *
+                vec2(
+                    0.72,
+                    1.12
+                ),
+
+                (
+                    uv
+                    -
+                    vec2(
+                        -0.72,
+                        0.02
+                    )
+                )
+                *
+                vec2(
+                    0.72,
+                    1.12
+                )
+            )
+            * 1.8
+        );
+
+
+    // --------------------------------------------------------
+    // Alone dietro il lobo destro
+    // --------------------------------------------------------
+
+    float glowRight =
+        exp(
+            -dot(
+                (
+                    uv
+                    -
+                    vec2(
+                        0.72,
+                        -0.02
+                    )
+                )
+                *
+                vec2(
+                    0.72,
+                    1.12
+                ),
+
+                (
+                    uv
+                    -
+                    vec2(
+                        0.72,
+                        -0.02
+                    )
+                )
+                *
+                vec2(
+                    0.72,
+                    1.12
+                )
+            )
+            * 1.8
+        );
+
 
     color +=
         vec3(
-            0.015,
-            0.001,
-            0.026
+            0.13,
+            0.008,
+            0.19
         )
-        * vignette;
+        *
+        (
+            glowLeft
+            +
+            glowRight
+        )
+        *
+        0.70;
+
+
+    // --------------------------------------------------------
+    // Incrocio centrale
+    // --------------------------------------------------------
+
+    float centerGlow =
+        exp(
+            -dot(
+                uv
+                *
+                vec2(
+                    1.15,
+                    1.45
+                ),
+
+                uv
+                *
+                vec2(
+                    1.15,
+                    1.45
+                )
+            )
+            * 2.0
+        );
+
+
+    color +=
+        vec3(
+            0.20,
+            0.015,
+            0.28
+        )
+        *
+        centerGlow
+        *
+        0.48;
+
+
+    // --------------------------------------------------------
+    // Leggerissima texture atmosferica
+    //
+    // Non è noise visibile: serve solo a evitare che
+    // il gradiente sembri perfettamente digitale.
+    // --------------------------------------------------------
+
+    float atmosphere =
+        0.5
+        +
+        0.5
+        *
+        sin(
+            uv.x * 3.1
+            +
+            uv.y * 2.4
+            +
+            u_time * 0.06
+        );
+
+
+    color +=
+        vec3(
+            0.018,
+            0.002,
+            0.030
+        )
+        *
+        atmosphere
+        *
+        radialGlow;
+
+
+    // --------------------------------------------------------
+    // Vignettatura
+    // --------------------------------------------------------
+
+    float vignette =
+        1.0
+        -
+        smoothstep(
+            0.70,
+            1.75,
+            length(uv)
+        );
+
+
+    color *=
+        0.68
+        +
+        vignette
+        *
+        0.32;
 
 
     // ========================================================
@@ -697,25 +920,60 @@ void main()
     // usiamo la distanza minima come un'unica forma continua.
     // ========================================================
 
-    float dUnion =
-        min(
-            dA,
-            dB
-        );
+ float dUnion =
+    min(
+        dA,
+        dB
+    );
 
-    float tUnion =
-        (
-            dA < dB
-            ? tA
-            : tB
-        );
 
-    vec3 continuousGlass =
+// ========================================================
+// Fusione continua dei due rami
+//
+// Prima sceglievamo tA oppure tB con:
+//
+//     dA < dB ? tA : tB
+//
+// Nell'incrocio questa scelta produceva confini geometrici
+// netti: i "triangoli" visibili nel materiale.
+//
+// Ora calcoliamo separatamente i due materiali e li
+// fondiamo gradualmente in base alla distanza dai rami.
+// ========================================================
+
+    vec3 baseGlassA =
         glassMaterial(
-            dUnion,
-            tUnion,
+            dA,
+            tA,
             thickness,
             eventPulse
+        );
+
+    vec3 baseGlassB =
+        glassMaterial(
+            dB,
+            tB,
+            thickness,
+            eventPulse
+        );
+
+
+    // Quanto siamo più vicini ad A rispetto a B.
+    // La fascia ±0.055 crea una zona di fusione abbastanza
+    // larga da eliminare il confine senza sfocare il tubo.
+    float branchBlend =
+        smoothstep(
+            -0.055,
+            0.055,
+            dB - dA
+        );
+
+
+    vec3 continuousGlass =
+        mix(
+            baseGlassB,
+            baseGlassA,
+            branchBlend
         );
 
 
@@ -729,21 +987,6 @@ void main()
     float depthB =
         infinityDepth(tB);
 
-    float bInFront =
-        smoothstep(
-            0.05,
-            0.35,
-            depthB - depthA
-        );
-
-    float aInFront =
-        smoothstep(
-            0.05,
-            0.35,
-            depthA - depthB
-        );
-
-
     // ========================================================
     // Zona di intersezione
     // ========================================================
@@ -752,18 +995,65 @@ void main()
         bodyA
         * bodyB;
 
-    // Il vetro continuo è la base.
+
+    // --------------------------------------------------------
+    // Maschera morbida dell'incrocio
+    //
+    // L'overlap puro segue troppo fedelmente i bordi dei due
+    // tubi e può creare tagli visibili. Lo rendiamo più morbido
+    // prima di usarlo per l'occlusione.
+    // --------------------------------------------------------
+
+    float softOverlap =
+        smoothstep(
+            0.0,
+            0.85,
+            overlap
+        );
+
+    softOverlap *=
+        softOverlap;
+
+
+    // Il vetro continuo resta sempre la base.
     color +=
         continuousGlass;
 
 
-    // Nell'incrocio attenuiamo leggermente la base per poter
-    // ridisegnare sopra soltanto il ramo realmente frontale.
+    // --------------------------------------------------------
+    // Profondità morbida
+    //
+    // Non "tagliamo" il tubo posteriore: lo attenuiamo
+    // progressivamente nell'area in cui passa sotto l'altro.
+    // --------------------------------------------------------
+
+    float frontA =
+        smoothstep(
+            -0.12,
+            0.28,
+            depthA - depthB
+        );
+
+    float frontB =
+        smoothstep(
+            -0.12,
+            0.28,
+            depthB - depthA
+        );
+
+
+    // Riduzione molto più delicata della base.
+    // Prima era 0.20 sull'overlap diretto: troppo visibile.
+    float intersectionDim =
+        softOverlap
+        * 0.08;
+
     color *=
         1.0
-        - overlap * 0.20;
+        - intersectionDim;
 
 
+    // Materiali dei due rami.
     vec3 glassA =
         glassMaterial(
             dA,
@@ -781,18 +1071,24 @@ void main()
         );
 
 
-    // Solo il ramo frontale riceve un rinforzo nell'overlap.
+    // --------------------------------------------------------
+    // Il ramo davanti viene rinforzato gradualmente.
+    //
+    // Usiamo softOverlap e una depth mask larga per evitare
+    // qualsiasi cambio netto nell'incrocio.
+    // --------------------------------------------------------
+
     color +=
         glassA
-        * overlap
-        * aInFront
-        * 0.68;
+        * softOverlap
+        * frontA
+        * 0.42;
 
     color +=
         glassB
-        * overlap
-        * bInFront
-        * 0.68;
+        * softOverlap
+        * frontB
+        * 0.42;
 
 
     // ========================================================
@@ -829,13 +1125,15 @@ void main()
     // sparisce davvero dietro il ramo frontale.
     float pulseVisibilityA =
         1.0
-        - overlap
-        * bInFront;
+        - softOverlap
+        * frontB
+        * 0.92;
 
     float pulseVisibilityB =
         1.0
-        - overlap
-        * aInFront;
+        - softOverlap
+        * frontA
+        * 0.92;
 
 
     color +=

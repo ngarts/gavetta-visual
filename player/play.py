@@ -160,8 +160,9 @@ def create_scene_renderer(
     current_time: float
 ):
     """
-    Compila lo shader associato alla scena
-    e costruisce il relativo VAO.
+    Compila lo shader associato alla scena,
+    costruisce il relativo VAO e carica
+    l'eventuale texture dichiarata nella playlist.
     """
 
     shader_path = (
@@ -191,7 +192,87 @@ def create_scene_renderer(
         current_time
     )
 
-    return program, vao
+    # --------------------------------------------------------
+    # Texture opzionale
+    #
+    # Il Director può dichiarare nella scena:
+    #
+    # "texture": "images/wanderer-fog.png"
+    #
+    # Il Player non conosce il significato artistico
+    # dell'immagine: si limita a caricarla e passarla
+    # allo shader.
+    # --------------------------------------------------------
+
+    texture = None
+
+    texture_name = scene.get(
+        "texture"
+    )
+
+    if texture_name is not None:
+
+        texture_path = (
+            ROOT_DIR /
+            texture_name
+        )
+
+        if not texture_path.exists():
+            raise FileNotFoundError(
+                f"Texture non trovata: "
+                f"{texture_path}"
+            )
+
+        image = pygame.image.load(
+            str(texture_path)
+        ).convert_alpha()
+
+        # Le coordinate verticali delle immagini pygame
+        # e quelle OpenGL hanno origine opposta.
+        # Ribaltando qui l'immagine evitiamo che nello
+        # shader il viandante appaia capovolto.
+        image = pygame.transform.flip(
+            image,
+            False,
+            True
+        )
+
+        image_data = pygame.image.tostring(
+            image,
+            "RGBA",
+            False
+        )
+
+        texture = ctx.texture(
+            image.get_size(),
+            4,
+            image_data
+        )
+
+        texture.filter = (
+            moderngl.LINEAR,
+            moderngl.LINEAR
+        )
+
+        texture.repeat_x = False
+        texture.repeat_y = False
+
+        # Texture unit 0.
+        texture.use(
+            location=0
+        )
+
+        set_uniform(
+            program,
+            "u_texture",
+            0
+        )
+
+        print(
+            f"TEXTURE: {texture_name}"
+        )
+
+    return program, vao, texture
 
 
 # ------------------------------------------------------------
@@ -362,7 +443,7 @@ def main():
 
     scene = scenes[scene_index]
 
-    program, vao = create_scene_renderer(
+    program, vao, texture = create_scene_renderer(
         ctx,
         vertices,
         scene,
@@ -455,7 +536,7 @@ def main():
 
             scene = scenes[scene_index]
 
-            program, vao = create_scene_renderer(
+            program, vao, texture = create_scene_renderer(
                 ctx,
                 vertices,
                 scene,

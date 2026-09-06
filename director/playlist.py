@@ -34,7 +34,7 @@ MAX_SCENE_DURATION = 30.0
 OPENING_SHADER = "triangle-tunnel.frag"
 
 # Entro questo istante tutti i linguaggi visivi devono essere già comparsi.
-EARLY_COVERAGE_END = 70.0
+EARLY_COVERAGE_END = 100.0
 
 # Piccolo malus per evitare ritorni troppo ravvicinati allo stesso shader.
 # Non è un divieto: A -> B -> A resta possibile se la musica lo giustifica.
@@ -53,12 +53,17 @@ EARLY_MISSING_BOOST = 1.18
 SHADERS = [
     "impact-sphere.frag",
     "triangle-tunnel.frag",
-    "coin-ring.frag",
+    "infinity-glass.frag",
     "fragments.frag",
     "matrix.frag",
     "saturn.frag",
+    "wanderer-fog.frag",
+    "fractal-nebula.frag"
 ]
 
+SHADER_TEXTURES = {
+    "wanderer-fog.frag": "images/wanderer-fog.png"
+}
 
 # ------------------------------------------------------------
 # Utility
@@ -277,6 +282,8 @@ def score_shader(
     I frammenti preferiscono attività transiente diffusa.
     Matrix preferisce densità + energia sostenuta.
     Saturno preferisce respiro, con transienti controllati e presenza sonora.
+    Il viandante preferisce sezioni ampie e contemplative.
+    La nebula frattale preferisce energia continua con attività transiente distribuita.
 
     Nota importante:
     - transientP90 premia i PICCHI forti;
@@ -297,7 +304,7 @@ def score_shader(
             0.15 * features["transientMean"]
         )
 
-    if shader == "coin-ring.frag":
+    if shader == "infinity-glass.frag":
         # L'infinito di vetro funziona bene quando la musica lascia spazio:
         # penalizziamo sia i transienti forti sia l'affollamento medio.
         #
@@ -354,6 +361,44 @@ def score_shader(
         return (
             0.60 * transient_calm +
             0.40 * sustained_presence
+        )
+
+    if shader == "wanderer-fog.frag":
+        # Il viandante funziona meglio nelle sezioni ampie e contemplative:
+        # pochi transienti aggressivi, ma sufficiente energia sostenuta
+        # perché la nebbia possa respirare e reagire agli eventi.
+
+        transient_calm = (
+            1.0 /
+            (
+                1.0 +
+                0.75 * features["transientP90"] +
+                0.25 * features["transientMean"]
+            )
+        )
+
+        sustained_presence = (
+            features["sustainedRms"] /
+            (1.0 + features["sustainedRms"])
+        )
+
+        return (
+            0.70 * transient_calm +
+            0.30 * sustained_presence
+        )
+
+    if shader == "fractal-nebula.frag":
+        # La nebula frattale rende meglio quando la musica combina
+        # attività transiente diffusa ed energia sostenuta.
+        #
+        # A differenza della sfera non cerca il singolo colpo dominante;
+        # a differenza di Matrix non privilegia soltanto la densità.
+        # Cerchiamo sezioni musicalmente vive e continue, nelle quali
+        # filamenti e bordi possano reagire senza diventare frenetici.
+        return (
+            0.50 * features["transientMean"] +
+            0.20 * features["transientP90"] +
+            0.30 * features["sustainedRms"]
         )
 
     raise ValueError(
@@ -433,6 +478,7 @@ def events_in_window(
 def select_shader_for_window(
     scores: dict,
     used_shaders: set,
+    usage_windows: dict,
     windows_left: int,
     current_shader: str | None,
     current_scene_duration: float,
@@ -449,10 +495,15 @@ def select_shader_for_window(
     2. tutti gli shader devono essere comparsi entro EARLY_COVERAGE_END;
     3. la durata massima di una scena resta MAX_SCENE_DURATION;
     4. i ritorni troppo ravvicinati ricevono un piccolo malus;
-    5. dopo la copertura iniziale la musica torna a decidere liberamente.
+    5. gli shader già molto usati accumulano una fatica visiva;
+    6. dopo la copertura iniziale la musica torna a decidere liberamente.
 
     Il recency penalty non vieta A -> B -> A: rende soltanto meno pigro
     il Director quando due shader tendono a dominare numericamente.
+
+    La fatica visiva non impone quote e non vieta nessuno shader:
+    riduce progressivamente il vantaggio di quelli già molto presenti,
+    lasciando comunque alla musica la possibilità di richiamarli.
     """
 
     # --------------------------------------------------------
@@ -530,7 +581,7 @@ def select_shader_for_window(
     for shader in candidates:
         score = scores[shader]
 
-        # Durante i primi 70 secondi diamo un piccolo vantaggio
+        # Durante la fase iniziale di copertura diamo un piccolo vantaggio
         # agli shader ancora non presentati.
         if (
             window_start < EARLY_COVERAGE_END
@@ -558,6 +609,30 @@ def select_shader_for_window(
                 score *= RECENCY_PENALTY_NEAR
             elif windows_since_use <= 4:
                 score *= RECENCY_PENALTY_MEDIUM
+
+        # ----------------------------------------------------
+        # Fatica visiva
+        #
+        # Ogni finestra già assegnata a uno shader riduce
+        # progressivamente il suo score futuro.
+        #
+        # Non è un divieto: se la musica continua ad avere
+        # una forte affinità con quello shader, può ancora vincere.
+        # ----------------------------------------------------
+        previous_windows = usage_windows.get(
+            shader,
+            0
+        )
+
+        fatigue = (
+            1.0 /
+            (
+                1.0 +
+                0.10 * previous_windows
+            )
+        )
+
+        score *= fatigue
 
         adjusted_scores[shader] = score
 
@@ -623,6 +698,15 @@ def build_scenes(
     used_shaders = set()
     last_used_window = {}
 
+    # Numero di finestre già assegnate a ciascuno shader.
+    # Serve per applicare una fatica visiva progressiva:
+    # uno shader molto usato deve avere una ragione musicale
+    # più forte per continuare a dominare la regia.
+    usage_windows = {
+        shader: 0
+        for shader in SHADERS
+    }
+
     current_shader = None
     current_scene_start = 0.0
 
@@ -678,6 +762,7 @@ def build_scenes(
         shader = select_shader_for_window(
             scores,
             used_shaders,
+            usage_windows,
             windows_left,
             current_shader,
             current_scene_duration,
@@ -694,8 +779,9 @@ def build_scenes(
 
         used_shaders.add(shader)
         last_used_window[shader] = index
+        usage_windows[shader] += 1
 
-        scenes.append({
+        scene ={
             "start": round(start, 3),
             "end": round(end, 3),
             "shader": shader,
@@ -716,7 +802,17 @@ def build_scenes(
                     in scores.items()
                 }
             }
-        })
+        }
+
+        # Alcuni shader possono richiedere risorse esterne.
+        # Il Director dichiara la risorsa nella playlist;
+        # sarà poi il Player a caricarla e passarla alla GPU.
+        texture = SHADER_TEXTURES.get(shader)
+
+        if texture is not None:
+            scene["texture"] = texture
+
+        scenes.append(scene)
 
     scenes = merge_adjacent_scenes(
         scenes

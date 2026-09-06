@@ -122,7 +122,7 @@ float fbm(vec2 p)
 
 
 // ============================================================
-// ROTAZIONE 2D
+// ROTAZIONE
 // ============================================================
 
 vec2 rotate2D(
@@ -136,15 +136,17 @@ vec2 rotate2D(
     float s =
         sin(angle);
 
-    return vec2(
-        c * p.x - s * p.y,
-        s * p.x + c * p.y
-    );
+    return
+        mat2(
+            c, -s,
+            s,  c
+        )
+        * p;
 }
 
 
 // ============================================================
-// FORMA STELLA
+// STELLA
 // ============================================================
 
 float starShape(
@@ -155,49 +157,70 @@ float starShape(
     float d =
         length(p);
 
+
     float core =
-        1.0 -
-        smoothstep(
-            0.0,
-            size,
-            d
+        exp(
+            -d
+            * d
+            /
+            (
+                size
+                * size
+            )
         );
 
 
-    float crossH =
+    float rayX =
         exp(
             -abs(p.x)
-            * 120.0
+            /
+            (
+                size * 0.16
+            )
         )
         *
         exp(
             -abs(p.y)
-            * 16.0
+            /
+            (
+                size * 2.8
+            )
         );
 
 
-    float crossV =
+    float rayY =
         exp(
             -abs(p.y)
-            * 120.0
+            /
+            (
+                size * 0.16
+            )
         )
         *
         exp(
             -abs(p.x)
-            * 16.0
+            /
+            (
+                size * 2.8
+            )
         );
 
 
     return
-        core * 1.4
+        core
         +
-        (crossH + crossV)
-        * 0.20;
+        0.40
+        *
+        (
+            rayX
+            +
+            rayY
+        );
 }
 
 
 // ============================================================
-// CAMPO STELLARE NORMALE
+// CAMPO STELLARE
 // ============================================================
 
 vec3 starField(
@@ -209,12 +232,8 @@ vec3 starField(
         vec3(0.0);
 
 
-    // --------------------------------------------------------
-    // stelle lontane
-    // --------------------------------------------------------
-
     vec2 grid1 =
-        uv * 34.0;
+        uv * 32.0;
 
     vec2 cell1 =
         floor(grid1);
@@ -227,12 +246,12 @@ vec3 starField(
         hash21(cell1);
 
 
-    if (rnd1 > 0.91)
+    if (rnd1 > 0.82)
     {
         vec2 offset =
             vec2(
-                hash21(cell1 + 11.7),
-                hash21(cell1 + 37.2)
+                hash21(cell1 + 2.0),
+                hash21(cell1 + 7.0)
             )
             - 0.5;
 
@@ -244,9 +263,9 @@ vec3 starField(
 
         float size =
             mix(
-                0.018,
-                0.050,
-                hash21(cell1 + 82.0)
+                0.015,
+                0.040,
+                hash21(cell1 + 9.0)
             );
 
 
@@ -276,14 +295,14 @@ vec3 starField(
         vec3 starColor =
             mix(
                 vec3(
-                    0.85,
-                    0.25,
-                    1.0
+                    0.55,
+                    0.72,
+                    1.00
                 ),
                 vec3(
-                    1.0,
-                    0.16,
-                    0.38
+                    0.30,
+                    0.55,
+                    1.00
                 ),
                 hash21(cell1 + 19.0)
             );
@@ -296,10 +315,6 @@ vec3 starField(
             * 0.55;
     }
 
-
-    // --------------------------------------------------------
-    // stelle medie
-    // --------------------------------------------------------
 
     vec2 grid2 =
         uv * 18.0;
@@ -385,14 +400,14 @@ vec3 starField(
         vec3 starColor =
             mix(
                 vec3(
-                    0.95,
-                    0.35,
-                    1.0
+                    0.72,
+                    0.84,
+                    1.00
                 ),
                 vec3(
-                    1.0,
-                    0.32,
-                    0.55
+                    0.38,
+                    0.66,
+                    1.00
                 ),
                 hash21(cell2 + 91.0)
             );
@@ -412,9 +427,6 @@ vec3 starField(
 
 // ============================================================
 // STELLE FOREGROUND
-//
-// Più grandi, più vicine, soprattutto ai bordi.
-// Alcune reagiscono agli eventi musicali.
 // ============================================================
 
 vec3 foregroundStars(
@@ -442,7 +454,6 @@ vec3 foregroundStars(
         );
 
 
-    // Preferenza ai bordi orizzontali
     float edgeFactor =
         smoothstep(
             0.45,
@@ -529,14 +540,14 @@ vec3 foregroundStars(
         vec3 starColor =
             mix(
                 vec3(
-                    0.90,
-                    0.30,
+                    0.68,
+                    0.80,
                     1.00
                 ),
                 vec3(
-                    1.00,
-                    0.18,
-                    0.48
+                    0.26,
+                    0.58,
+                    1.00
                 ),
                 hash21(cell + 61.0)
             );
@@ -628,34 +639,34 @@ vec3 nebula(
         0.5 * n2;
 
 
-    vec3 violet =
+    vec3 deepBlue =
         vec3(
-            0.22,
-            0.01,
-            0.32
+            0.008,
+            0.025,
+            0.12
         );
 
 
-    vec3 magenta =
+    vec3 indigo =
         vec3(
-            0.55,
-            0.015,
-            0.24
+            0.025,
+            0.10,
+            0.34
         );
 
 
-    vec3 pink =
+    vec3 iceBlue =
         vec3(
-            0.95,
-            0.06,
-            0.42
+            0.16,
+            0.42,
+            0.82
         );
 
 
     vec3 col =
         mix(
-            violet,
-            magenta,
+            deepBlue,
+            indigo,
             n1
         );
 
@@ -663,7 +674,7 @@ vec3 nebula(
     col =
         mix(
             col,
-            pink,
+            iceBlue,
             pow(n2, 3.0)
         );
 
@@ -719,10 +730,6 @@ vec3 renderPlanet(
     }
 
 
-    // --------------------------------------------------------
-    // falsa sfera 3D
-    // --------------------------------------------------------
-
     vec2 sphereUV =
         q / radius;
 
@@ -763,10 +770,6 @@ vec3 renderPlanet(
             normal.y
         );
 
-
-    // --------------------------------------------------------
-    // bande atmosferiche
-    // --------------------------------------------------------
 
     float bands1 =
         sin(
@@ -813,46 +816,42 @@ vec3 renderPlanet(
         0.22 * turbulence;
 
 
-    // --------------------------------------------------------
-    // palette
-    // --------------------------------------------------------
-
-    vec3 deepViolet =
+    vec3 deepNavy =
         vec3(
-            0.06,
-            0.004,
-            0.10
+            0.006,
+            0.012,
+            0.055
         );
 
 
-    vec3 violet =
+    vec3 indigo =
+        vec3(
+            0.025,
+            0.075,
+            0.25
+        );
+
+
+    vec3 cobalt =
+        vec3(
+            0.035,
+            0.20,
+            0.58
+        );
+
+
+    vec3 iceBlue =
         vec3(
             0.30,
-            0.025,
-            0.42
-        );
-
-
-    vec3 magenta =
-        vec3(
             0.72,
-            0.02,
-            0.34
-        );
-
-
-    vec3 hotPink =
-        vec3(
-            1.00,
-            0.12,
-            0.48
+            1.00
         );
 
 
     vec3 surfaceColor =
         mix(
-            deepViolet,
-            violet,
+            deepNavy,
+            indigo,
             smoothstep(
                 0.15,
                 0.55,
@@ -864,7 +863,7 @@ vec3 renderPlanet(
     surfaceColor =
         mix(
             surfaceColor,
-            magenta,
+            cobalt,
             smoothstep(
                 0.48,
                 0.92,
@@ -872,10 +871,6 @@ vec3 renderPlanet(
             )
         );
 
-
-    // --------------------------------------------------------
-    // illuminazione
-    // --------------------------------------------------------
 
     vec3 lightDir =
         normalize(
@@ -905,89 +900,105 @@ vec3 renderPlanet(
                 normal.z,
                 0.0
             ),
-            2.5
+            2.2
         );
 
 
-    float fresnel =
-        pow(
-            1.0
-            -
-            max(
-                normal.z,
-                0.0
+    float atmosphericDepth =
+        smoothstep(
+            0.0,
+            1.0,
+            z
+        );
+
+
+    float bandContrast =
+        smoothstep(
+            0.25,
+            0.80,
+            pattern
+        );
+
+
+    vec3 shadowColor =
+        vec3(
+            0.003,
+            0.008,
+            0.028
+        );
+
+
+    vec3 litSurface =
+        mix(
+            shadowColor,
+            surfaceColor,
+            0.35 + diffuse * 0.65
+        );
+
+
+    litSurface *=
+        0.78
+        +
+        bandContrast * 0.38;
+
+
+    vec3 atmosphericColor =
+        mix(
+            vec3(
+                0.015,
+                0.055,
+                0.18
             ),
-            4.0
+            iceBlue,
+            pattern * 0.45
         );
 
 
     vec3 color =
-        surfaceColor
+        litSurface
         *
         (
-            0.16
+            0.45
             +
-            diffuse * 0.85
-        );
-
-
-    // --------------------------------------------------------
-    // Glass interno, ma meno trasparente di prima
-    // --------------------------------------------------------
-
-    float internalGlow =
-        pow(
-            max(
-                0.0,
-                1.0
-                -
-                d / radius
-            ),
-            2.5
+            atmosphericDepth * 0.55
         );
 
 
     color +=
-        violet
-        * internalGlow
+        atmosphericColor
+        * diffuse
+        * turbulence
         * 0.18;
 
 
-    // superficie leggermente più piena
     color +=
-        surfaceColor
-        * 0.18;
-
-
-    // --------------------------------------------------------
-    // bordo glass
-    // --------------------------------------------------------
-
-    color +=
-        hotPink
+        iceBlue
         * rim
-        * 1.15;
+        * 0.55;
 
 
     color +=
         vec3(
-            0.8,
-            0.15,
-            1.0
+            0.16,
+            0.42,
+            0.88
         )
-        * fresnel
-        * 0.65;
+        * pow(rim, 2.0)
+        * 0.22;
 
-
-    // --------------------------------------------------------
-    // reazione all'evento
-    // --------------------------------------------------------
 
     color +=
-        hotPink
+        iceBlue
         * rim
         * eventPulse
-        * 0.95;
+        * 0.48;
+
+
+    color +=
+        surfaceColor
+        * bandContrast
+        * eventPulse
+        * 0.10;
 
 
     return
@@ -1131,42 +1142,50 @@ vec3 renderRings(
         );
 
 
-    vec3 violet =
+    vec3 darkDust =
         vec3(
-            0.28,
-            0.02,
-            0.50
+            0.025,
+            0.040,
+            0.085
         );
 
 
-    vec3 magenta =
+    vec3 indigoDust =
         vec3(
-            0.75,
-            0.015,
-            0.38
+            0.070,
+            0.150,
+            0.300
         );
 
 
-    vec3 pink =
+    vec3 silverDust =
         vec3(
-            1.0,
-            0.20,
-            0.65
+            0.46,
+            0.60,
+            0.78
         );
 
 
     vec3 color =
         mix(
-            violet,
-            magenta,
+            darkDust,
+            indigoDust,
             stripePattern
         );
 
 
-    color +=
-        pink
-        * highlight
-        * 1.3;
+    color =
+        mix(
+            color,
+            silverDust,
+            highlight * 0.55
+        );
+
+
+    color *=
+        0.55
+        +
+        stripePattern * 0.70;
 
 
     float edgeInner =
@@ -1188,55 +1207,270 @@ vec3 renderRings(
 
 
     color +=
-        pink
+        silverDust
         *
         (
             edgeInner
             +
             edgeOuter
         )
-        * 1.4;
+        * 0.42;
 
 
-    // --------------------------------------------------------
-    // impulso lungo gli anelli
-    // --------------------------------------------------------
-
-    float angle =
-        atan(
-            ringUV.y,
-            ringUV.x
-        );
-
-
-    float movingPulse =
-        exp(
-            -pow(
-                sin(
-                    angle
-                    -
-                    u_time * 0.85
-                ),
-                2.0
-            )
-            * 13.0
-        );
+    float ringResponse =
+        0.18
+        +
+        eventPulse * 0.42;
 
 
     color +=
-        pink
-        * movingPulse
-        *
-        (
-            0.20
-            +
-            eventPulse * 1.4
-        );
+        silverDust
+        * highlight
+        * ringResponse;
 
 
     return
         color
         * ringMask;
+}
+
+
+// ============================================================
+// PICCOLA SFERA ROSSA IN ORBITA
+//
+// Richiamo visivo alla sfera di impact-sphere.frag.
+//
+// La sfera segue la stessa ellisse degli anelli.
+// Non reagisce agli eventi musicali: il suo movimento è continuo.
+// ============================================================
+
+vec3 renderOrbitSphere(
+    vec2 uv,
+    out float sphereMask,
+    out float sphereFrontSide
+)
+{
+    vec2 planetCenter =
+        vec2(
+            0.18,
+            0.03
+        );
+
+
+    // --------------------------------------------------------
+    // orbita
+    //
+    // Valore compreso all'interno della fascia degli anelli.
+    // --------------------------------------------------------
+
+    float orbitRadius =
+        1.04;
+
+
+    // --------------------------------------------------------
+    // movimento antiorario
+    //
+    // Il segno positivo produce rotazione antioraria
+    // nel sistema locale degli anelli.
+    // --------------------------------------------------------
+
+    float orbitAngle =
+        u_time * 0.32;
+
+
+    // posizione nel sistema "circolare" degli anelli
+    vec2 orbitPoint =
+        vec2(
+            cos(orbitAngle) * orbitRadius,
+            sin(orbitAngle) * orbitRadius
+        );
+
+
+    // schiacciamento verticale:
+    // lo stesso rapporto usato dagli anelli
+    vec2 localEllipsePoint =
+        vec2(
+            orbitPoint.x,
+            orbitPoint.y * 0.23
+        );
+
+
+    // riportiamo l'ellisse alla rotazione visiva degli anelli
+    vec2 sphereCenter =
+        planetCenter
+        +
+        rotate2D(
+            localEllipsePoint,
+            0.28
+        );
+
+
+    // --------------------------------------------------------
+    // dimensione
+    // --------------------------------------------------------
+
+    float sphereRadius =
+        0.034;
+
+
+    vec2 q =
+        uv
+        -
+        sphereCenter;
+
+
+    float d =
+        length(q);
+
+
+    sphereMask =
+        1.0
+        -
+        smoothstep(
+            sphereRadius,
+            sphereRadius + 0.004,
+            d
+        );
+
+
+    if (sphereMask <= 0.0)
+    {
+        sphereFrontSide = 0.0;
+        return vec3(0.0);
+    }
+
+
+    // --------------------------------------------------------
+    // falso volume 3D
+    // --------------------------------------------------------
+
+    vec2 sphereUV =
+        q / sphereRadius;
+
+
+    float z =
+        sqrt(
+            max(
+                0.0,
+                1.0
+                -
+                dot(
+                    sphereUV,
+                    sphereUV
+                )
+            )
+        );
+
+
+    vec3 normal =
+        normalize(
+            vec3(
+                sphereUV,
+                z
+            )
+        );
+
+
+    vec3 lightDir =
+        normalize(
+            vec3(
+                -0.65,
+                0.55,
+                0.85
+            )
+        );
+
+
+    float diffuse =
+        max(
+            dot(
+                normal,
+                lightDir
+            ),
+            0.0
+        );
+
+
+    float rim =
+        pow(
+            1.0
+            -
+            max(
+                normal.z,
+                0.0
+            ),
+            2.4
+        );
+
+
+    // --------------------------------------------------------
+    // materiale rosso
+    // --------------------------------------------------------
+
+    vec3 deepRed =
+        vec3(
+            0.12,
+            0.002,
+            0.004
+        );
+
+
+    vec3 red =
+        vec3(
+            0.88,
+            0.015,
+            0.025
+        );
+
+
+    vec3 hotRed =
+        vec3(
+            1.00,
+            0.18,
+            0.12
+        );
+
+
+    vec3 color =
+        mix(
+            deepRed,
+            red,
+            0.25
+            +
+            diffuse * 0.75
+        );
+
+
+    color +=
+        hotRed
+        * pow(diffuse, 8.0)
+        * 0.55;
+
+
+    color +=
+        red
+        * rim
+        * 0.35;
+
+
+    // --------------------------------------------------------
+    // fronte / retro
+    //
+    // L'orbita in coordinate circolari conserva il segno di Y:
+    // la metà inferiore corrisponde alla parte frontale degli anelli.
+    // --------------------------------------------------------
+
+    sphereFrontSide =
+        smoothstep(
+            -0.03,
+            0.03,
+            -orbitPoint.y
+        );
+
+
+    return
+        color
+        * sphereMask;
 }
 
 
@@ -1300,9 +1534,9 @@ void main()
 
     vec3 color =
         vec3(
-            0.0015,
             0.0002,
-            0.004
+            0.0012,
+            0.0045
         );
 
 
@@ -1317,7 +1551,6 @@ void main()
         );
 
 
-    // stelle lontane / medie
     color +=
         starField(
             uv,
@@ -1325,7 +1558,6 @@ void main()
         );
 
 
-    // stelle grandi ai bordi
     color +=
         foregroundStars(
             uv,
@@ -1360,6 +1592,22 @@ void main()
             uv,
             eventPulse,
             ringMask
+        );
+
+
+    // --------------------------------------------------------
+    // piccola sfera rossa
+    // --------------------------------------------------------
+
+    float orbitSphereMask;
+    float orbitSphereFrontSide;
+
+
+    vec3 orbitSphere =
+        renderOrbitSphere(
+            uv,
+            orbitSphereMask,
+            orbitSphereFrontSide
         );
 
 
@@ -1401,7 +1649,10 @@ void main()
         frontSide;
 
 
-    // anello dietro
+    // --------------------------------------------------------
+    // metà posteriore degli anelli
+    // --------------------------------------------------------
+
     color +=
         rings
         * backSide
@@ -1411,16 +1662,119 @@ void main()
             planetMask
         );
 
-
+    // --------------------------------------------------------
     // pianeta
+    // --------------------------------------------------------
+
     color +=
         planet;
 
 
-    // anello davanti
+    // --------------------------------------------------------
+    // metà frontale degli anelli
+    // --------------------------------------------------------
+
     color +=
         rings
         * frontSide;
+
+    // --------------------------------------------------------
+    // sfera rossa appoggiata sopra gli anelli
+    //
+    // La sfera viene disegnata dopo entrambi i lati degli anelli,
+    // quindi le linee non possono attraversarla.
+    //
+    // Quando passa nella metà posteriore dell'orbita continua
+    // però a essere nascosta dal pianeta.
+    // --------------------------------------------------------
+
+    float sphereVisibility =
+        orbitSphereFrontSide
+        +
+        (
+            1.0
+            -
+            orbitSphereFrontSide
+        )
+        *
+        (
+            1.0
+            -
+            planetMask
+        );
+
+    // --------------------------------------------------------
+    // compositing opaco della sfera
+    //
+    // orbitSphere contiene già sphereMask moltiplicata al colore.
+    // Recuperiamo il materiale originale della sfera e lo
+    // sovrapponiamo realmente a ciò che c'è sotto.
+    //
+    // Così le linee degli anelli NON possono più attraversarla.
+    // --------------------------------------------------------
+
+    float sphereAlpha =
+        orbitSphereMask
+        * sphereVisibility;
+
+
+    vec3 sphereSurface =
+        orbitSphere
+        /
+        max(
+            orbitSphereMask,
+            0.00001
+        );
+
+
+    color =
+        mix(
+            color,
+            sphereSurface,
+            sphereAlpha
+        );
+
+    // --------------------------------------------------------
+    // piccolo alone rosso
+    //
+    // Compare soltanto quando la sfera è visibile.
+    // --------------------------------------------------------
+
+    vec2 orbitLocalPoint =
+        vec2(
+            cos(u_time * 0.32) * 1.04,
+            sin(u_time * 0.32) * 1.04 * 0.23
+        );
+
+
+    vec2 orbitScreenPoint =
+        planetCenter
+        +
+        rotate2D(
+            orbitLocalPoint,
+            0.28
+        );
+
+
+    float orbitGlow =
+        exp(
+            -length(
+                uv
+                -
+                orbitScreenPoint
+            )
+            * 48.0
+        );
+
+    color +=
+        vec3(
+            0.55,
+            0.006,
+            0.012
+        )
+        * orbitGlow
+        * sphereVisibility
+        * 0.18;
 
 
     // --------------------------------------------------------
@@ -1452,9 +1806,9 @@ void main()
 
     color +=
         vec3(
-            0.82,
-            0.05,
-            0.52
+            0.12,
+            0.46,
+            1.00
         )
         * atmosphere
         *
