@@ -23,16 +23,7 @@ with this project.
 ▶ **Nicola Gullo – Gavetta (Official Visual Video)**  
 https://youtu.be/o009C6Qxiv4
 
-
-
-
-
-
 ---
-
-
-
-
 
 ## Concept
 
@@ -611,8 +602,23 @@ The absence of the master audio from this repository is intentional.
 
 ## Gavetta
 
+**“Gavetta”** is an original song by Nicola Gullo and is available on
+digital music platforms.
+
+🎵 **Listen to Gavetta:**  
+https://nicolagullo.bandcamp.com/track/gavetta
+
+🎬 **Watch the official visual video:**  
+https://youtu.be/o009C6Qxiv4
+
+The master recording is intentionally not distributed with this repository.
+
+You can use your own audio file to experiment with Gavetta Visual, while the
+original recording remains available separately through its official music
+distribution channels.
+
 The source code can generate the images.
 
 The repository can explain the system.
 
-But the audiovisual work begins with the song.
+**But the audiovisual work begins with the song.**
